@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Smart Home Automation System</title>
+</head>
+<body>
+    <button type='button' id='b3'>Calibrate</button>
+    <h2>Manual Control in Day Time</h2>
+    <button type='button' id='b1'>OFF</button>
+    <h2>Manual Override</h2>
+    <button type='button' id='b2'>OFF</button>
+    <h2>Logs</h2>
+    <button type='button' id='b4'>Clear Logs</button>
+    <p id='l1'></p>
+
+</body>
+<script>
+    var Socket;
+    var logs = '';
+    var b1_s = 'false';
+    var b2_s = 'false';
+
+    var b1 = document.getElementById('b1');
+    var b2 = document.getElementById('b2');
+    var b3 = document.getElementById('b3');
+    var b4 = document.getElementById('b4');
+    var l1 = document.getElementById('l1');
+
+    b1.addEventListener('click', b1_c);
+    b2.addEventListener('click', b2_c);
+    b3.addEventListener('click', b3_c);
+    b4.addEventListener('click', b4_c);
+
+    function init() {
+      Socket = new WebSocket('ws://' + window.location.hostname + ':81/');
+      Socket.onmessage = function(event) {
+        proc_log(event);
+      };
+    }
+    function proc_log(event) {
+      var obj = JSON.parse(event.data);
+      console.log(obj);
+
+      var serial = obj.Serial;
+      if (serial == 'CM01'){
+        if (obj.B1_s != b1_s || obj.B2_s != b2_s){
+          Socket.send('6');
+        }
+
+        b1_s = obj.B1_s;
+        b2_s = obj.B2_s;
+
+        if (b1_s == 'true'){
+          b1.innerHTML = 'ON';
+        }else if (b1_s == 'false'){
+          b1.innerHTML = 'OFF';
+        }
+
+        if (b2_s == 'true'){
+          b2.innerHTML = 'ON';
+        }else if (b2_s == 'false'){
+          b2.innerHTML = 'OFF';
+        }
+
+        if (obj.Log != ''){
+          logs += obj.Log + '<br />';
+        }
+        l1.innerHTML = logs;
+      }
+    }
+    function b1_c() {
+        if (b1_s == 'false'){
+          Socket.send('2');
+        }else if (b1_s == 'true'){
+          Socket.send('1');
+        }
+    }
+    function b2_c() {
+        if (b2_s == 'false'){
+          Socket.send('4');
+        }else if (b2_s == 'true'){
+          Socket.send('3');
+        }
+    }
+    function b3_c() {
+        Socket.send('5');
+    }
+    function b4_c() {
+        logs = '';
+        l1.innerHTML = logs;
+    }
+    window.onload = function(event) {
+      init();
+    }
+  </script>
+</html>
